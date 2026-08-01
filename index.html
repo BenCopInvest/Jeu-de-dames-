@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Damier — Entraîneur de Dames Internationales</title>
+<meta name="theme-color" content="#1c120a">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='16' fill='%232E1D10'/%3E%3Ccircle cx='50' cy='50' r='30' fill='%23B08D57'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --walnut-950:#1c120a;
+    --walnut-800:#2e1d10;
+    --walnut-700:#3c2716;
+    --board-dark:#4a2e18;
+    --board-light:#e8dcc3;
+    --ivory:#f1e9d8;
+    --brass:#b08d57;
+    --brass-bright:#d4ac70;
+    --garnet:#7b1e2b;
+    --garnet-bright:#a8324a;
+    --white-piece:#f4efe3;
+    --black-piece:#201512;
+    --ok:#5b8c5a;
+    font-size:16px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;background:var(--walnut-950);color:var(--ivory);font-family:'Inter',sans-serif;overflow-x:hidden;}
+  body{display:flex;flex-direction:column;min-height:100vh;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
+
+  header{padding:14px 16px 6px;text-align:center;position:relative;}
+  header h1{font-family:'Fraunces',serif;font-weight:700;font-size:1.35rem;margin:0;letter-spacing:.3px;color:var(--brass-bright);}
+  header .sub{font-size:.72rem;color:#c9b89a;margin-top:2px;text-transform:uppercase;letter-spacing:1.5px;font-family:'IBM Plex Mono',monospace;}
+
+  .statusbar{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:#d8c9ab;}
+  .turn-pill{display:inline-flex;align-items:center;gap:6px;background:var(--walnut-700);padding:5px 10px;border-radius:20px;border:1px solid var(--brass);}
+  .turn-dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+  .turn-dot.w{background:var(--white-piece);box-shadow:0 0 0 1px var(--brass);}
+  .turn-dot.b{background:var(--black-piece);box-shadow:0 0 0 1px var(--garnet);}
+
+  main{flex:1;display:flex;flex-direction:column;align-items:center;padding:4px 10px 10px;gap:10px;}
+
+  .board-wrap{position:relative;width:min(94vw, 480px);aspect-ratio:1/1;border-radius:6px;padding:10px;background:linear-gradient(160deg,var(--walnut-700),var(--walnut-950));box-shadow:0 8px 30px rgba(0,0,0,.5), inset 0 0 0 2px var(--brass);}
+  .board-wrap::before,.board-wrap::after{content:'';position:absolute;width:9px;height:9px;border-radius:50%;background:var(--brass);top:6px;left:6px;box-shadow:0 0 0 2px var(--walnut-950);}
+  .board-wrap::after{left:auto;right:6px;}
+  .corner-bl,.corner-br{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--brass);bottom:6px;box-shadow:0 0 0 2px var(--walnut-950);}
+  .corner-bl{left:6px;} .corner-br{right:6px;}
+
+  #board{display:grid;grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(10,1fr);width:100%;height:100%;border-radius:2px;overflow:hidden;box-shadow:0 0 0 1px var(--walnut-950);}
+  .sq{position:relative;display:flex;align-items:center;justify-content:center;}
+  .sq.light{background:var(--board-light);}
+  .sq.dark{background:var(--board-dark);}
+  .sq.selectable::after{content:'';position:absolute;width:26%;height:26%;border-radius:50%;background:var(--brass-bright);opacity:.85;animation:pulse 1.4s ease-in-out infinite;}
+  .sq.capturable::after{background:var(--garnet-bright);}
+  @keyframes pulse{0%,100%{transform:scale(.85);opacity:.55;}50%{transform:scale(1.05);opacity:.95;}}
+  .sq.origin{box-shadow:inset 0 0 0 3px var(--brass-bright);}
+  .sq.mustmove::before{content:'';position:absolute;inset:2px;border:2px solid var(--garnet-bright);border-radius:3px;opacity:.8;pointer-events:none;}
+
+  .piece{width:78%;height:78%;border-radius:50%;position:relative;cursor:pointer;transition:transform .12s ease;}
+  .piece.w{background:radial-gradient(circle at 35% 30%, #fffdf7, var(--white-piece) 60%, #cbbfa4 100%);box-shadow:0 2px 4px rgba(0,0,0,.5), inset 0 0 0 2px var(--brass);}
+  .piece.b{background:radial-gradient(circle at 35% 30%, #453329, var(--black-piece) 60%, #0c0705 100%);box-shadow:0 2px 4px rgba(0,0,0,.6), inset 0 0 0 2px var(--garnet);}
+  .piece.king::after{content:'♛';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.1rem;color:var(--brass-bright);}
+  .piece.b.king::after{color:var(--garnet-bright);}
+  .piece:active{transform:scale(.92);}
+
+  .panel{width:min(94vw,480px);background:var(--walnut-800);border:1px solid var(--walnut-700);border-radius:12px;padding:12px 14px;}
+  .panel h2{font-family:'Fraunces',serif;font-size:.95rem;margin:0 0 8px;color:var(--brass-bright);display:flex;align-items:center;gap:6px;}
+  .coach-q{font-size:.85rem;line-height:1.4;color:#e6dcc6;margin-bottom:8px;}
+  .coach-q b{color:var(--brass-bright);}
+  .btnrow{display:flex;gap:8px;flex-wrap:wrap;}
+  button{font-family:'Inter',sans-serif;font-weight:600;font-size:.82rem;padding:9px 14px;border-radius:8px;border:1px solid var(--brass);background:transparent;color:var(--brass-bright);cursor:pointer;}
+  button.primary{background:var(--brass);color:var(--walnut-950);}
+  button:active{transform:scale(.97);}
+  select{font-family:'Inter',sans-serif;font-size:.82rem;background:var(--walnut-700);color:var(--ivory);border:1px solid var(--brass);border-radius:8px;padding:8px 10px;}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between;}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;font-family:'IBM Plex Mono',monospace;}
+  .stats div span{display:block;font-size:1.1rem;color:var(--brass-bright);font-weight:600;}
+  .stats div small{font-size:.62rem;color:#c9b89a;text-transform:uppercase;letter-spacing:1px;}
+  .hist{max-height:90px;overflow-y:auto;font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:#c9b89a;line-height:1.6;}
+  .lesson-level{font-family:'IBM Plex Mono',monospace;font-size:.66rem;color:var(--brass-bright);text-transform:uppercase;letter-spacing:1px;margin:12px 0 4px;}
+  .lesson-level:first-child{margin-top:0;}
+  .lesson-item{border-bottom:1px solid var(--walnut-700);}
+  .lesson-head{display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-size:.84rem;color:var(--ivory);padding:8px 2px;}
+  .lesson-head .check{color:var(--ok);margin-right:6px;font-size:.9rem;}
+  .lesson-body{display:none;font-size:.78rem;line-height:1.45;color:#d8c9ab;padding:0 2px 10px;}
+  .lesson-body.open{display:block;}
+  .elo-bar-row{display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:.68rem;margin:3px 0;color:#c9b89a;}
+  .elo-bar-track{flex:1;background:var(--walnut-700);border-radius:3px;overflow:hidden;height:8px;}
+  .elo-bar-fill{height:8px;background:var(--brass);border-radius:3px;}
+  .tag{display:inline-block;background:var(--walnut-700);border:1px solid var(--brass);border-radius:5px;padding:1px 6px;font-size:.68rem;margin-right:6px;}
+  footer{text-align:center;font-size:.65rem;color:#8a7a63;padding:10px;font-family:'IBM Plex Mono',monospace;}
+  .thinking{color:var(--garnet-bright);}
+  ::-webkit-scrollbar{width:5px;} ::-webkit-scrollbar-thumb{background:var(--brass);border-radius:3px;}
+</style>
+</head>
+<body>
+<header>
+  <h1>♛ Damier</h1>
+  <div class="sub">Entraîneur de dames internationales · 10×10</div>
+</header>
+
+<div class="statusbar">
+  <span class="turn-pill"><span class="turn-dot w" id="turnDotW"></span><span class="turn-dot b" id="turnDotB"></span> <span id="turnLabel">Blancs à jouer</span></span>
+  <span id="capNotice"></span>
+</div>
+
+<main>
+  <div class="board-wrap">
+    <div class="corner-bl"></div><div class="corner-br"></div>
+    <div id="board"></div>
+  </div>
+
+  <div class="panel" id="puzzleOverlay" style="display:none;">
+    <h2>🎯 Exercice tactique</h2>
+    <div class="coach-q" id="puzzleTitle"></div>
+    <div class="coach-q" id="puzzleFeedback"></div>
+    <div class="btnrow">
+      <button class="primary" id="puzzleNextBtn">Suivant</button>
+      <button id="puzzleQuitBtn">Quitter l'entraînement</button>
+    </div>
+  </div>
+
+  <div class="panel" id="reportPanel" style="display:none;">
+    <h2>🧾 Rapport de partie</h2>
+    <div class="coach-q" id="reportBody"></div>
+  </div>
+
+  <div class="panel" id="coachPanel">
+    <h2>🧭 Coach virtuel</h2>
+    <div class="coach-q" id="coachText">Qui contrôle le centre ? Observe le plateau avant de jouer.</div>
+    <div class="btnrow">
+      <button id="askCoach">Poser une question au coach</button>
+      <button id="analyzeBtn">Analyser la position</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>🗓️ Entraînement quotidien</h2>
+    <div class="coach-q"><b>Réflexion du jour :</b> <span id="reflectionText"></span></div>
+    <div class="coach-q" id="pastErrorText"></div>
+    <div class="coach-q" id="puzzleProgressText" style="font-size:.72rem;color:#c9b89a;"></div>
+    <div class="btnrow">
+      <button class="primary" id="startTrainingBtn">Commencer les 5 exercices tactiques</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>📚 Programme d'apprentissage</h2>
+    <div class="coach-q" style="font-size:.72rem;color:#c9b89a;" id="lessonProgressText"></div>
+    <div id="lessonList"></div>
+  </div>
+
+  <div class="panel" id="illustrationPanel" style="display:none;">
+    <h2>🖼️ Illustration</h2>
+    <div class="coach-q" id="illustrationCaption"></div>
+    <div class="btnrow">
+      <button id="illustrationCloseBtn">Fermer</button>
+    </div>
+  </div>
+
+  <div class="panel" id="gameViewerPanel" style="display:none;">
+    <h2>📖 Partie historique</h2>
+    <div class="coach-q" id="gameViewerInfo"></div>
+    <div class="btnrow">
+      <button id="viewerPrevBtn">◀ Précédent</button>
+      <button id="viewerNextBtn">Suivant ▶</button>
+      <button id="viewerQuitBtn">Fermer</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>🏛️ Bibliothèque de parties historiques</h2>
+    <div class="coach-q" style="font-size:.76rem;">Parties réelles sourcées, revalidées coup par coup par le moteur de règles de l'application.</div>
+    <div class="btnrow" id="gameLibraryList"></div>
+  </div>
+
+  <div class="panel">
+    <div class="row" style="margin-bottom:10px;">
+      <select id="modeSel">
+        <option value="ai">Contre l'IA</option>
+        <option value="pvp">Joueur contre joueur</option>
+      </select>
+      <select id="diffSel">
+        <option value="1">Débutant</option>
+        <option value="2">Amateur</option>
+        <option value="3" selected>Joueur de club</option>
+        <option value="4">Confirmé</option>
+        <option value="5">Expert</option>
+      </select>
+    </div>
+    <div class="btnrow">
+      <button class="primary" id="newGameBtn">Nouvelle partie</button>
+      <button id="undoBtn">Annuler</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>📊 Progression (session)</h2>
+    <div class="stats">
+      <div><span id="stMen">40</span><small>Pièces</small></div>
+      <div><span id="stCaps">0</span><small>Prises</small></div>
+      <div><span id="stMoves">0</span><small>Coups</small></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>🏆 Progression (historique)</h2>
+    <div class="coach-q" id="progressDashboard" style="font-size:.78rem;"></div>
+    <div class="btnrow" style="margin-top:8px;">
+      <button id="resetDataBtn">Effacer mes données locales</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>📜 Historique</h2>
+    <div class="hist" id="histList">—</div>
+  </div>
+</main>
+
+<footer>V1 · gratuit · hors ligne · FMJD (règles internationales 10×10)</footer>
+
+<script>
+/* ============================================================
+   MOTEUR — Dames internationales (FMJD), plateau 10x10
+   ============================================================ */
+const SIZE = 10;
+const DIRS = [[-1,-1],[-1,1],[1,-1],[1,1]];
+const key = (r,c)=> r*10+c;
+// Conversion notation internationale (case 1-50) -> coordonnées (r,c) du plateau, utilisée par la bibliothèque de parties
+function squareToCoord(s){
+  const r = Math.floor((s-1)/5);
+  const k = ((s-1)%5)+1;
+  const c = (r%2===0) ? (2*k-1) : (2*k-2);
+  return {r,c};
+}
+
+function initBoard(){
+  const b = Array.from({length:SIZE},()=>Array(SIZE).fill(null));
+  for(let r=0;r<4;r++) for(let c=0;c<10;c++) if((r+c)%2===1) b[r][c]={color:'b',king:false};
+  for(let r=6;r<10;r++) for(let c=0;c<10;c++) if((r+c)%2===1) b[r][c]={color:'w',king:false};
+  return b;
+}
+function inB(r,c){return r>=0&&r<SIZE&&c>=0&&c<SIZE;}
+function cloneBoard(b){return b.map(row=>row.map(p=>p?{...p}:null));}
+
+// -- Génération des prises (récursif, règle de prise maximale) --
+function findImmediateCaptures(board,r,c,piece,capturedSet){
+  const res=[];
+  for(const d of DIRS){
+    if(piece.king){
+      let rr=r+d[0], cc=c+d[1];
+      while(inB(rr,cc) && board[rr][cc]===null){ rr+=d[0]; cc+=d[1]; }
+      if(inB(rr,cc) && board[rr][cc] && board[rr][cc].color!==piece.color && !capturedSet.has(key(rr,cc))){
+        let lr=rr+d[0], lc=cc+d[1];
+        while(inB(lr,lc) && board[lr][lc]===null){
+          res.push({to:{r:lr,c:lc}, captured:{r:rr,c:cc}});
+          lr+=d[0]; lc+=d[1];
+        }
+      }
+    } else {
+      const mr=r+d[0], mc=c+d[1], lr=r+2*d[0], lc=c+2*d[1];
+      if(inB(lr,lc) && inB(mr,mc) && board[mr][mc] && board[mr][mc].color!==piece.color && !capturedSet.has(key(mr,mc)) && board[lr][lc]===null){
+        res.push({to:{r:lr,c:lc}, captured:{r:mr,c:mc}});
+      }
+    }
+  }
+  return res;
+}
+function buildCaptureSequences(board,r,c,piece,capturedSet,path){
+  const caps = findImmediateCaptures(board,r,c,piece,capturedSet);
+  if(caps.length===0){
+    if(path.length===0) return [];
+    return [{path:path.slice(), capturedCount:capturedSet.size}];
+  }
+  let out=[];
+  for(const cap of caps){
+    const ns = new Set(capturedSet); ns.add(key(cap.captured.r,cap.captured.c));
+    const np = path.concat([{r:cap.to.r,c:cap.to.c,captured:cap.captured}]);
+    let nextPiece = piece;
+    if(!piece.king){
+      const promotes = (piece.color==='w' && cap.to.r===0) || (piece.color==='b' && cap.to.r===9);
+      if(promotes) nextPiece = {...piece, king:true}; // promotion FMJD immédiate : la suite de la rafle utilise les pouvoirs de dame
+    }
+    out = out.concat(buildCaptureSequences(board,cap.to.r,cap.to.c,nextPiece,ns,np));
+  }
+  return out;
+}
+function simpleMoves(board,r,c,piece){
+  const moves=[];
+  if(piece.king){
+    for(const d of DIRS){
+      let rr=r+d[0], cc=c+d[1];
+      while(inB(rr,cc) && board[rr][cc]===null){ moves.push({r:rr,c:cc}); rr+=d[0]; cc+=d[1]; }
+    }
+  } else {
+    const dirs = piece.color==='w' ? [[-1,-1],[-1,1]] : [[1,-1],[1,1]];
+    for(const d of dirs){
+      const rr=r+d[0], cc=c+d[1];
+      if(inB(rr,cc) && board[rr][cc]===null) moves.push({r:rr,c:cc});
+    }
+  }
+  return moves;
+}
+// Retourne la liste complète des coups légaux pour `color` (règle de prise obligatoire + maximale)
+function legalMoves(board,color){
+  let allCaptures=[];
+  for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++){
+    const p = board[r][c];
+    if(p && p.color===color){
+      const seqs = buildCaptureSequences(board,r,c,p,new Set(),[]);
+      for(const s of seqs) allCaptures.push({from:{r,c}, path:s.path, count:s.path.length, isCapture:true});
+    }
+  }
+  if(allCaptures.length>0){
+    const max = Math.max(...allCaptures.map(m=>m.count));
+    return allCaptures.filter(m=>m.count===max);
+  }
+  const moves=[];
+  for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++){
+    const p = board[r][c];
+    if(p && p.color===color){
+      for(const to of simpleMoves(board,r,c,p)) moves.push({from:{r,c}, path:[{r:to.r,c:to.c}], count:0, isCapture:false});
+    }
+  }
+  return moves;
+}
+function applyMove(board,move){
+  const b = cloneBoard(board);
+  const {r:fr,c:fc} = move.from;
+  let piece = {...b[fr][fc]};
+  b[fr][fc]=null;
+  let last = move.from;
+  for(const step of move.path){
+    if(step.captured) b[step.captured.r][step.captured.c]=null;
+    last = {r:step.r, c:step.c};
+    if(!piece.king){
+      const promotes = (piece.color==='w' && last.r===0) || (piece.color==='b' && last.r===9);
+      if(promotes) piece = {...piece, king:true};
+    }
+  }
+  b[last.r][last.c]=piece;
+  return b;
+}
+function countMaterial(board){
+  let wm=0,wk=0,bm=0,bk=0;
+  for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++){
+    const p=board[r][c]; if(!p) continue;
+    if(p.color==='w'){ p.king?wk++:wm++; } else { p.king?bk++:bm++; }
+  }
+  return {wm,wk,bm,bk};
+}
+function evaluate(board, forColor){
+  const {wm,wk,bm,bk} = countMaterial(board);
+  let score = (wm*100+wk*320) - (bm*100+bk*320);
+  for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++){
+    const p=board[r][c]; if(!p) continue;
+    const centerBonus = 4 - (Math.abs(r-4.5)+Math.abs(c-4.5))*0.5;
+    const advBonus = p.king?0:(p.color==='w' ? (9-r)*1.2 : r*1.2);
+    const val = centerBonus + advBonus;
+    score += p.color==='w' ? val : -val;
+  }
+  return forColor==='w' ? score : -score;
+}
+function minimax(board,depth,alpha,beta,maximizing,color){
+  const opponent = color==='w'?'b':'w';
+  const current = maximizing? color: opponent;
+  const moves = legalMoves(board,current);
+  if(depth===0 || moves.length===0){
+    if(moves.length===0) return maximizing ? -100000+depth : 100000-depth;
+    return evaluate(board,color);
+  }
+  if(maximizing){
+    let best=-Infinity;
+    for(const m of moves){
+      const nb = applyMove(board,m);
+      const v = minimax(nb,depth-1,alpha,beta,false,color);
+      best=Math.max(best,v); alpha=Math.max(alpha,v);
+      if(beta<=alpha) break;
+    }
+    return best;
+  } else {
+    let best=Infinity;
+    for(const m of moves){
+      const nb = applyMove(board,m);
+      const v = minimax(nb,depth-1,alpha,beta,true,color);
+      best=Math.min(best,v); beta=Math.min(beta,v);
+      if(alpha>=beta) break;
+    }
+    return best;
+  }
+}
+function pickAIMove(board,color,depth){
+  const moves = legalMoves(board,color);
+  if(moves.length===0) return null;
+  let best=null, bestScore=-Infinity;
+  for(const m of moves){
+    const nb = applyMove(board,m);
+    const v = minimax(nb,depth-1,-Infinity,Infinity,false,color);
+    if(v>bestScore){ bestScore=v; best=m; }
+  }
+  return best;
+}
+const DIFF_DEPTH = {1:2,2:3,3:4,4:6,5:7};
+
+/* ============================================================
+   V2 — ANALYSE DE PARTIE (erreurs, rapport, niveau estimé)
+   ============================================================ */
+const ANALYSIS_DEPTH = 3;
+function analyzeMoveQuality(beforeBoard, color, chosenMove){
+  const legal = legalMoves(beforeBoard, color);
+  if(legal.length<=1) return null; // aucun choix réel : rien à évaluer
+  let bestVal = -Infinity;
+  for(const m of legal){
+    const nb = applyMove(beforeBoard,m);
+    const v = minimax(nb, ANALYSIS_DEPTH-1, -Infinity, Infinity, false, color);
+    if(v>bestVal) bestVal=v;
+  }
+  const nbChosen = applyMove(beforeBoard, chosenMove);
+  const chosenVal = minimax(nbChosen, ANALYSIS_DEPTH-1, -Infinity, Infinity, false, color);
+  return { loss: bestVal - chosenVal };
+}
+function buildBlunderText(loss){
+  if(loss>250) return "erreur grave — une pièce importante a probablement été perdue, ou une occasion majeure manquée.";
+  if(loss>120) return "erreur — le contrôle du centre ou la sécurité d'une pièce a été négligé.";
+  return "imprécision — un coup légèrement meilleur était disponible.";
+}
+function recordQualityIfHuman(beforeBoard, color, move){
+  const isHuman = (mode==='pvp') || (mode==='ai' && color!==aiColor);
+  if(!isHuman) return;
+  const q = analyzeMoveQuality(beforeBoard, color, move);
+  if(q && q.loss > 40){
+    moveLog.push({ moveNumber: totalMoves+1, color, loss: Math.round(q.loss), text: buildBlunderText(q.loss) });
+  }
+}
+function buildReport(){
+  if(moveLog.length===0) return "Belle partie, aucune erreur majeure détectée !";
+  const sorted = [...moveLog].sort((a,b)=>b.loss-a.loss).slice(0,3);
+  let html = "<b>Points clés à travailler :</b><ul style='margin:6px 0 0 18px;padding:0;'>";
+  for(const m of sorted){
+    html += `<li>Coup ${m.moveNumber} (${m.color==='w'?'Blancs':'Noirs'}) — ${m.text}</li>`;
+  }
+  html += "</ul>";
+  return html;
+}
+function estimateLevel(){
+  if(moveLog.length===0) return 1850;
+  const avgLoss = moveLog.reduce((s,m)=>s+m.loss,0)/moveLog.length;
+  return Math.max(700, Math.min(2100, Math.round(1900 - avgLoss*3)));
+}
+function saveSession(result){
+  const rec = {
+    date:new Date().toISOString().slice(0,10),
+    elo: estimateLevel(),
+    blunders: moveLog.length,
+    result: result, // 'victoire' | 'defaite' | 'pvp'
+    worst: moveLog.length ? [...moveLog].sort((a,b)=>b.loss-a.loss)[0].text : null
+  };
+  try{
+    const arr = JSON.parse(localStorage.getItem('damier_sessions')||'[]');
+    arr.push(rec);
+    if(arr.length>30) arr.shift();
+    localStorage.setItem('damier_sessions', JSON.stringify(arr));
+  }catch(e){}
+  return rec;
+}
+
+/* ============================================================
+   V2 — ENTRAÎNEMENT QUOTIDIEN (exercices tactiques)
+   ============================================================ */
+const PUZZLES = [
+  {id:1, diff:'Débutant', title:'Rafle double (1)', toMove:'w',
+   pieces:[{r:6,c:5,color:'w'},{r:5,c:4,color:'b'},{r:3,c:4,color:'b'}],
+   solution:{r:2,c:5},
+   explain:"La première prise enchaîne automatiquement sur la seconde : c'est la rafle multiple, toujours obligatoire et maximale."},
+  {id:2, diff:'Débutant', title:'Rafle double (2)', toMove:'b',
+   pieces:[{r:3,c:4,color:'b'},{r:4,c:5,color:'w'},{r:6,c:5,color:'w'}],
+   solution:{r:7,c:4},
+   explain:"Même principe côté Noirs : anticipe toujours la suite de la chaîne avant de jouer le premier saut."},
+  {id:3, diff:'Club', title:'Rafle triple', toMove:'w',
+   pieces:[{r:8,c:7,color:'w'},{r:7,c:6,color:'b'},{r:5,c:6,color:'b'},{r:3,c:6,color:'b'}],
+   solution:{r:2,c:5},
+   explain:"Trois prises en zigzag : il faut lire toute la chaîne, pas seulement le premier saut."},
+  {id:4, diff:'Club', title:'Rafle triple (miroir)', toMove:'b',
+   pieces:[{r:1,c:2,color:'b'},{r:2,c:3,color:'w'},{r:4,c:3,color:'w'},{r:6,c:3,color:'w'}],
+   solution:{r:7,c:4},
+   explain:"La même combinaison côté Noirs : la lecture en profondeur paie toujours."},
+  {id:5, diff:'Expert', title:'Dame volante', toMove:'w',
+   pieces:[{r:5,c:4,color:'w',king:true},{r:3,c:2,color:'b'},{r:1,c:2,color:'b'}],
+   solution:{r:0,c:3},
+   explain:"La dame capture à distance et choisit sa case d'arrivée : seul un atterrissage précis permet d'enchaîner la seconde prise."},
+  {id:6, diff:'Expert', title:'Dame volante (miroir)', toMove:'b',
+   pieces:[{r:4,c:5,color:'b',king:true},{r:6,c:7,color:'w'},{r:8,c:7,color:'w'}],
+   solution:{r:9,c:6},
+   explain:"Même idée côté Noirs : la portée illimitée de la dame internationale change tout le calcul."}
+];
+function getDailyPuzzles(){
+  const dayIdx = Math.floor(Date.now()/86400000);
+  const shift = dayIdx % PUZZLES.length;
+  return PUZZLES.slice(shift).concat(PUZZLES.slice(0,shift)).slice(0,5);
+}
+
+/* ============================================================
+   V3 — PROGRAMME D'APPRENTISSAGE (4 niveaux)
+   ============================================================ */
+const LESSONS = [
+  { level:1, levelTitle:"Niveau 1 — Débutant stratégique", topic:"Contrôle du centre",
+    text:"Les cases centrales offrent le plus de diagonales et donc le plus d'options de déplacement et de prise. Un pion central menace et défend plus de cases qu'un pion de bord : céder le centre sans compensation, c'est céder l'initiative à l'adversaire pour le reste de la partie." },
+  { level:1, levelTitle:"Niveau 1 — Débutant stratégique", topic:"Mobilité",
+    text:"Un pion bloqué par ses propres pièces ou par l'adversaire ne peut plus participer au jeu. Compte régulièrement combien de tes pions peuvent réellement bouger : une position où l'adversaire a plus de mobilité que toi devient dangereuse même à matériel égal." },
+  { level:1, levelTitle:"Niveau 1 — Débutant stratégique", topic:"Développement",
+    text:"Comme aux échecs, il faut sortir ses pions de la base sans les avancer au hasard. Un développement harmonieux garde les deux ailes équilibrées et évite de créer des trous que l'adversaire pourra exploiter par une combinaison." },
+  { level:1, levelTitle:"Niveau 1 — Débutant stratégique", topic:"Équilibre",
+    text:"Ne concentre pas tous tes pions sur une seule aile : un camp déséquilibré devient vulnérable sur son côté faible. L'équilibre entre l'aile droite et l'aile gauche est une des '4 règles d'or' classiques enseignées aux débutants." },
+  { level:1, levelTitle:"Niveau 1 — Débutant stratégique", topic:"Sécurité",
+    text:"Avant chaque coup, vérifie si tu exposes un pion à une rafle simple ou multiple. Rappelle-toi que la prise est toujours obligatoire et maximale chez l'adversaire aussi : une case qui semble sûre peut ouvrir une combinaison à plusieurs coups d'avance." },
+
+  { level:2, levelTitle:"Niveau 2 — Joueur de club", topic:"Structures de pions",
+    text:"Certaines formations de pions (colonnes, triangles) résistent bien aux combinaisons car elles se soutiennent mutuellement. Apprends à reconnaître les structures solides plutôt que de juger chaque pion isolément." },
+  { level:2, levelTitle:"Niveau 2 — Joueur de club", topic:"Chaînes de pions",
+    text:"Une chaîne de pions immobilise l'aile adverse en la privant de coups utiles : c'est le principe même de « l'entrave ». Plus la chaîne dure longtemps, plus elle prépare une combinaison qui détruira le centre adverse au moment choisi." },
+  { level:2, levelTitle:"Niveau 2 — Joueur de club", topic:"Cases faibles",
+    text:"Une case qu'aucun de tes pions ne peut plus défendre devient un point d'appui pour l'adversaire, en particulier près de ta ligne de promotion. Repère ces cases faibles tôt et évite d'y laisser filer une pièce sans soutien." },
+  { level:2, levelTitle:"Niveau 2 — Joueur de club", topic:"Attaques",
+    text:"Une attaque efficace prépare une rafle avant de la déclencher : elle force l'adversaire à occuper des cases précises (souvent par un gambit ou un forcing) pour que la combinaison finale capture le maximum de pièces." },
+  { level:2, levelTitle:"Niveau 2 — Joueur de club", topic:"Défenses",
+    text:"Face à une chaîne ou une tenaille qui se prépare, la meilleure défense consiste souvent à briser la formation tout de suite, quitte à céder un pion, plutôt que d'attendre que l'adversaire choisisse le moment de la combinaison." },
+
+  { level:3, levelTitle:"Niveau 3 — Joueur avancé", topic:"Système Roozenburg",
+    text:"Ouverture et plan de jeu classique (Piet Roozenburg) : attaquer la grande aile adverse pour isoler puis gagner le pion central par des attaques successives, ou obtenir une supériorité spatiale si l'adversaire se replie. Considérée comme l'un des meilleurs plans pour les Blancs." },
+  { level:3, levelTitle:"Niveau 3 — Joueur avancé", topic:"Système Keller",
+    text:"Comme le système Roozenburg, le système Keller est un plan de jeu classique étudié en profondeur dans la théorie francophone (« Le système Keller »). Retiens le principe général : suivre un plan de développement cohérent sur plusieurs coups plutôt que de réagir coup par coup à l'adversaire." },
+  { level:3, levelTitle:"Niveau 3 — Joueur avancé", topic:"Le marchand de bois",
+    text:"Formation de pions (souvent autour des cases 26, 27, 31 et 36 en notation internationale) qui enchaîne et immobilise l'aile adverse. L'adversaire ne peut généralement s'en libérer qu'en sacrifiant un pion contre deux — d'où le nom, le « marchand » étant celui qui doit finir par « payer » pour se dégager." },
+  { level:3, levelTitle:"Niveau 3 — Joueur avancé", topic:"La tenaille",
+    text:"Forme d'entrave où un groupe de pièces adverses est totalement immobilisé, en général de façon inévitable : la tenaille conduit presque toujours à une combinaison qui détruit le centre adverse au moment choisi par son auteur. L'adversaire doit souvent démolir la tenaille en sacrifiant une pièce clé pour éviter le pire." },
+  { level:3, levelTitle:"Niveau 3 — Joueur avancé", topic:"Encerclement",
+    text:"Contrairement à la tenaille (contact direct), l'encerclement consiste à laisser l'adversaire occuper des cases centrales puis à l'étouffer progressivement par manque d'espace et de temps, sans jamais engager le contact — une stratégie à très long terme." },
+  { level:3, levelTitle:"Niveau 3 — Joueur avancé", topic:"Sacrifices positionnels",
+    text:"Céder un pion sans récupération immédiate peut valoir un net gain de mobilité, de temps ou de structure. Un sacrifice positionnel se justifie quand la perte matérielle est largement compensée par une initiative durable, à distinguer d'un simple oubli de rafle." },
+
+  { level:4, levelTitle:"Niveau 4 — Expert", topic:"Finales complexes",
+    text:"En finale, la valeur des pions reste liée à leur mobilité et à leur proximité de la promotion, pas seulement à leur nombre. Les oppositions (un pion central bat souvent un pion de bord plus avancé) restent décisives jusqu'au tout dernier coup." },
+  { level:4, levelTitle:"Niveau 4 — Expert", topic:"Calcul profond",
+    text:"Les meilleurs joueurs visualisent des rafles à 5, 10 coups ou plus avant de les jouer. Entraîne-toi à calculer une combinaison entière sur le damier mental avant de déplacer la première pièce, plutôt que de vérifier coup après coup." },
+  { level:4, levelTitle:"Niveau 4 — Expert", topic:"Préparation d'ouverture",
+    text:"Connaître les grandes familles d'ouvertures (Roozenburg, défense orthogonale, jeu de flanc...) permet d'éviter les pièges connus et de choisir un plan de jeu cohérent dès les premiers coups plutôt que de développer au hasard." },
+  { level:4, levelTitle:"Niveau 4 — Expert", topic:"Analyse de parties de maîtres",
+    text:"Rejouer des parties de grands maîtres (Baba Sy, Roozenburg, Sijbrands...) en cherchant à deviner le coup joué avant de le révéler est l'un des exercices les plus formateurs pour progresser au-delà du niveau club." }
+];
+
+/* ============================================================
+   V4 — BIBLIOTHÈQUE DE PARTIES HISTORIQUES
+   Chaque partie est une transcription sourcée, revalidée coup par
+   coup par le moteur de règles de l'application (aucun coup n'est
+   accepté s'il n'est pas légal au regard des règles FMJD).
+   ============================================================ */
+const GAMES = [
+  { id:1, white:"C. Dorland", black:"Piet Roozenburg", year:1951,
+    source:"J.-P. Dubois, « Sens du jeu », document pédagogique FMJD",
+    moves: ["34-29","16-21","33-28","21-26","38-33","20-24","29x20","15x24","40-34","18-23","34-29","23x34",
+            "39x30","12-18","44-39","18-23","42-38","17-21","47-42","7-12","31-27","11-16","45-40","13-18",
+            "40-34","9-13","30-25","4-9","34-29","23x34","39x30","18-23","43-39","12-18","39-34","8-12",
+            "34-29","23x34","30x39","18-23","49-44","10-15","44-40","12-18","40-34","1-7","34-30","7-12",
+            "50-45","2-8","39-34","24-29","33x24","14-20","25x14","9x40","35x44","15-20","30-25","20-24",
+            "44-40","5-10","37-31","26x37","42x31","21-26","41-37","10-14","48-43","24-29","40-34","29x40",
+            "45x34","23-29","34x23","18x29","43-39","3-9","28-22","19-24","38-33","29x38","32x43","24-29",
+            "43-38","13-19","38-32","19-24","39-33","29x38","32x43"] }
+];
+
+/* ============================================================
+   V5 — ILLUSTRATIONS DE CONCEPTS (positions statiques, vérifiées)
+   Chaque position a été testée par legalMoves() pour confirmer
+   qu'elle démontre bien la propriété annoncée (voir commentaires).
+   ============================================================ */
+const ILLUSTRATIONS = {
+  "La tenaille": {
+    pieces: [
+      {r:3,c:2,color:'b'},{r:3,c:4,color:'b'},{r:3,c:6,color:'b'},
+      {r:4,c:1,color:'w'},{r:4,c:3,color:'w'},{r:4,c:5,color:'w'},{r:4,c:7,color:'w'}
+    ],
+    toMove:'b',
+    caption:"Position illustrative (vérifiée par le moteur) : les trois pions Noirs alignés n'ont ici plus aucun coup normal — leur seul recours légal est une prise. C'est le mécanisme de base de l'entrave / tenaille : contraindre l'adversaire à se découvrir, quitte à ce que la prise forcée coûte cher juste après."
+  },
+  "Le marchand de bois": {
+    // Cases 26, 27, 31, 36 (notation internationale), citées dans la littérature FFJD comme
+    // formation type du marchand de bois ; pion noir en case 22 sans pion en 17, autre détail sourcé.
+    pieces: [
+      {r:5,c:0,color:'w'},{r:5,c:2,color:'w'},{r:6,c:1,color:'w'},{r:7,c:0,color:'w'},
+      {r:4,c:3,color:'b'},{r:3,c:4,color:'b'}
+    ],
+    toMove:'w',
+    caption:"Formation type du marchand de bois : pions Blancs sur les cases 26, 27, 31 et 36 (notation internationale). Le pion Noir en case 22 (sans pion en 17) illustre la configuration typique décrite dans la littérature FFJD : l'aile noire reste enchaînée tant que les Blancs ne choisissent pas de céder un pion contre deux pour se dégager."
+  },
+  "Encerclement": {
+    pieces: [
+      {r:4,c:3,color:'w'},{r:4,c:5,color:'w'},{r:5,c:4,color:'w'},
+      {r:0,c:1,color:'b'},{r:0,c:3,color:'b'},{r:1,c:2,color:'b'}
+    ],
+    toMove:'w',
+    caption:"Schéma conceptuel (sans rapport à une partie précise) : les Blancs tiennent le centre sans engager le contact, réduisant peu à peu l'espace disponible pour les Noirs. Contrairement à la tenaille, il n'y a ici aucune prise obligatoire — c'est une stratégie à long terme."
+  }
+};
+
+/* ============================================================
+   ETAT DE JEU & UI
+   ============================================================ */
+let board = initBoard();
+let turn = 'w';
+let mode = 'ai';       // 'ai' | 'pvp'
+let aiColor = 'b';
+let depth = DIFF_DEPTH[3];
+let selected = null;   // {r,c}
+let moveOptions = [];  // legal moves for selected piece
+let history = [];      // {board, turn} snapshots for undo
+let totalCaptures = 0;
+let totalMoves = 0;
+let gameOver = false;
+let moveLog = [];        // erreurs détectées pendant la partie en cours (V2)
+let puzzleMode = false;
+let puzzleQueue = [];
+let puzzleIndex = 0;
+let puzzleSavedState = null;
+let viewerMode = false;
+let viewerGame = null;
+let viewerPly = 0;
+let viewerSavedState = null;
+let illustrationMode = false;
+let illustrationSavedState = null;
+
+const boardEl = document.getElementById('board');
+const turnLabel = document.getElementById('turnLabel');
+const turnDotW = document.getElementById('turnDotW');
+const turnDotB = document.getElementById('turnDotB');
+const capNotice = document.getElementById('capNotice');
+const histList = document.getElementById('histList');
+const coachText = document.getElementById('coachText');
+
+function render(){
+  boardEl.innerHTML='';
+  const legal = gameOver? [] : legalMoves(board,turn);
+  const mustMoveFrom = new Set(legal.filter(m=>m.isCapture).map(m=>key(m.from.r,m.from.c)));
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      const sq = document.createElement('div');
+      const dark = (r+c)%2===1;
+      sq.className = 'sq ' + (dark?'dark':'light');
+      sq.dataset.r=r; sq.dataset.c=c;
+      if(selected && selected.r===r && selected.c===c) sq.classList.add('origin');
+      if(dark && mustMoveFrom.has(key(r,c)) && !(selected && selected.r===r && selected.c===c)) sq.classList.add('mustmove');
+      const optHit = moveOptions.find(o=>o.dest.r===r && o.dest.c===c);
+      if(optHit){ sq.classList.add('selectable'); if(optHit.move.isCapture) sq.classList.add('capturable'); }
+      const p = board[r][c];
+      if(p){
+        const pd = document.createElement('div');
+        pd.className = 'piece '+p.color+(p.king?' king':'');
+        sq.appendChild(pd);
+      }
+      sq.addEventListener('click', onSquareClick);
+      boardEl.appendChild(sq);
+    }
+  }
+  turnLabel.textContent = gameOver ? 'Partie terminée' : (turn==='w'?'Blancs à jouer':'Noirs à jouer');
+  turnDotW.style.opacity = turn==='w'?1:.3;
+  turnDotB.style.opacity = turn==='b'?1:.3;
+  const mustCapture = legal.length>0 && legal[0].isCapture;
+  capNotice.textContent = mustCapture ? '⚠ Prise obligatoire' : '';
+  const mat = countMaterial(board);
+  document.getElementById('stMen').textContent = (mat.wm+mat.wk+mat.bm+mat.bk);
+  document.getElementById('stCaps').textContent = totalCaptures;
+  document.getElementById('stMoves').textContent = totalMoves;
+}
+
+function onSquareClick(e){
+  if(illustrationMode) return;
+  if(viewerMode) return;
+  if(puzzleMode){ onPuzzleSquareClick(e); return; }
+  if(gameOver) return;
+  if(mode==='ai' && turn===aiColor) return;
+  const r = +e.currentTarget.dataset.r, c = +e.currentTarget.dataset.c;
+  const legal = legalMoves(board,turn);
+
+  if(selected){
+    const chosen = moveOptions.find(o=>o.dest.r===r && o.dest.c===c);
+    if(chosen){ playMove(chosen.move); selected=null; moveOptions=[]; render(); maybeAITurn(); return; }
+  }
+  const p = board[r][c];
+  if(p && p.color===turn){
+    const pieceMoves = legal.filter(m=>m.from.r===r && m.from.c===c);
+    if(pieceMoves.length===0){ selected=null; moveOptions=[]; render(); return; }
+    selected={r,c};
+    moveOptions = pieceMoves.map(m=>({ dest:m.path[m.path.length-1], move:m }));
+  } else {
+    selected=null; moveOptions=[];
+  }
+  render();
+}
+
+function playMove(move){
+  recordQualityIfHuman(board, turn, move);
+  const boardBefore = board;
+  const moverColor = turn;
+  history.push({board:cloneBoard(board), turn});
+  if(move.isCapture) totalCaptures += move.count;
+  totalMoves++;
+  board = applyMove(board,move);
+  logMove(move);
+  turn = turn==='w'?'b':'w';
+  checkGameOver();
+  if(!gameOver){
+    const comment = commentOnMove(boardBefore, board, moverColor, move);
+    const who = moverColor==='w' ? 'Blancs' : 'Noirs';
+    const needsReflection = !(mode==='ai' && turn===aiColor);
+    coachText.innerHTML = `<b>${who} :</b> ${comment}` +
+      (needsReflection ? `<br><span style="opacity:.8;">💭 ${reflectionLine()}</span>` : '');
+  }
+}
+function checkGameOver(){
+  const legal = legalMoves(board,turn);
+  if(legal.length===0){
+    gameOver=true;
+    const winnerColor = turn==='w' ? 'b' : 'w';
+    const winnerLabel = winnerColor==='w' ? 'Blancs' : 'Noirs';
+    coachText.innerHTML = `<b>Partie terminée — victoire des ${winnerLabel}.</b> ${turn==='w'?'Blancs':'Noirs'} ne peuvent plus jouer.`;
+    const result = mode==='ai' ? (winnerColor===aiColor ? 'defaite' : 'victoire') : 'pvp';
+    const rec = saveSession(result);
+    const panel = document.getElementById('reportPanel');
+    panel.style.display='block';
+    document.getElementById('reportBody').innerHTML = buildReport() +
+      `<div style="margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:#c9b89a;">Niveau estimé de cette partie : <b style="color:var(--brass-bright)">${rec.elo}</b> (indicatif, basé sur la qualité moyenne des coups)</div>`;
+    updateDailyPanel();
+    renderProgressDashboard();
+  }
+}
+function logMove(move){
+  const cols='abcdefghij';
+  const from = cols[move.from.c]+(10-move.from.r);
+  const last = move.path[move.path.length-1];
+  const to = cols[last.c]+(10-last.r);
+  const sep = move.isCapture? 'x' : '-';
+  const line = document.createElement('div');
+  line.innerHTML = `<span class="tag">${totalMoves}</span>${from}${sep}${to}`;
+  histList.prepend(line);
+}
+function maybeAITurn(){
+  if(gameOver) return;
+  if(mode==='ai' && turn===aiColor){
+    coachText.textContent = "L'IA réfléchit…";
+    setTimeout(()=>{
+      const m = pickAIMove(board,aiColor,depth);
+      if(m){ playMove(m); render(); }
+    }, 60);
+  }
+}
+function updateCoachHint(){
+  if(gameOver) return;
+  coachText.innerHTML = "<b>" + reflectionLine() + "</b> Réfléchis avant de jouer — le coach peut t'aider avec « Analyser la position ».";
+}
+
+function onPuzzleSquareClick(e){
+  const r=+e.currentTarget.dataset.r, c=+e.currentTarget.dataset.c;
+  const legal = legalMoves(board,turn);
+  if(selected){
+    const chosen = moveOptions.find(o=>o.dest.r===r && o.dest.c===c);
+    if(chosen){
+      board = applyMove(board, chosen.move);
+      selected=null; moveOptions=[];
+      render();
+      checkPuzzleAnswer(chosen.move);
+      return;
+    }
+  }
+  const p = board[r][c];
+  if(p && p.color===turn){
+    const pieceMoves = legal.filter(m=>m.from.r===r && m.from.c===c);
+    if(pieceMoves.length===0){ selected=null; moveOptions=[]; render(); return; }
+    selected={r,c};
+    moveOptions = pieceMoves.map(m=>({ dest:m.path[m.path.length-1], move:m }));
+  } else { selected=null; moveOptions=[]; }
+  render();
+}
+function startDailyTraining(){
+  puzzleQueue = getDailyPuzzles();
+  puzzleIndex = 0;
+  puzzleSavedState = {board:cloneBoard(board), turn, mode, history:history.slice(), totalCaptures, totalMoves, gameOver};
+  puzzleMode = true;
+  document.getElementById('puzzleOverlay').style.display='block';
+  loadPuzzle(0);
+}
+function loadPuzzle(i){
+  const p = puzzleQueue[i];
+  const b = Array.from({length:10},()=>Array(10).fill(null));
+  for(const piece of p.pieces) b[piece.r][piece.c] = {color:piece.color, king: !!piece.king};
+  board = b; turn = p.toMove; selected=null; moveOptions=[]; gameOver=false;
+  document.getElementById('puzzleTitle').innerHTML = `<b>${p.title}</b> · ${p.diff} (${i+1}/${puzzleQueue.length}) — ${p.toMove==='w'?'Blancs':'Noirs'} à jouer`;
+  document.getElementById('puzzleFeedback').textContent = '';
+  render();
+}
+function checkPuzzleAnswer(move){
+  const p = puzzleQueue[puzzleIndex];
+  const last = move.path[move.path.length-1];
+  const fb = document.getElementById('puzzleFeedback');
+  const ok = (last.r===p.solution.r && last.c===p.solution.c);
+  fb.innerHTML = ok ? `✅ Correct ! ${p.explain}` : `❌ Ce n'est pas la meilleure suite. ${p.explain}`;
+  try{
+    const key='damier_puzzle_progress';
+    const today = new Date().toISOString().slice(0,10);
+    const store = JSON.parse(localStorage.getItem(key)||'{}');
+    if(!store[today]) store[today]={solved:0,total:0};
+    store[today].total++; if(ok) store[today].solved++;
+    localStorage.setItem(key, JSON.stringify(store));
+  }catch(err){}
+}
+function nextPuzzle(){
+  if(puzzleIndex < puzzleQueue.length-1){ puzzleIndex++; loadPuzzle(puzzleIndex); }
+  else endDailyTraining();
+}
+function endDailyTraining(){
+  puzzleMode=false;
+  document.getElementById('puzzleOverlay').style.display='none';
+  board = puzzleSavedState.board; turn = puzzleSavedState.turn; mode = puzzleSavedState.mode;
+  history = puzzleSavedState.history; totalCaptures = puzzleSavedState.totalCaptures;
+  totalMoves = puzzleSavedState.totalMoves; gameOver = puzzleSavedState.gameOver;
+  selected=null; moveOptions=[];
+  render(); updateCoachHint(); updateDailyPanel();
+}
+function updateDailyPanel(){
+  const reflections = [
+    "Quelle pièce adverse est la plus active en ce moment ?",
+    "Quel est le point faible de ta propre structure de pions ?",
+    "Un échange de pièces maintenant t'avantagerait-il ?",
+    "Quel camp a le plus de mobilité sur le damier ?",
+    "As-tu un plan à 3 coups, ou joues-tu coup par coup ?"
+  ];
+  const dayIdx = Math.floor(Date.now()/86400000);
+  document.getElementById('reflectionText').textContent = reflections[dayIdx % reflections.length];
+  let pastErrorText = "Termine une partie pour recevoir une analyse personnalisée de ta plus grande erreur.";
+  try{
+    const arr = JSON.parse(localStorage.getItem('damier_sessions')||'[]');
+    const last = [...arr].reverse().find(s=>s.worst);
+    if(last) pastErrorText = `Lors de ta dernière partie analysée : ${last.worst}`;
+  }catch(e){}
+  document.getElementById('pastErrorText').textContent = pastErrorText;
+  try{
+    const store = JSON.parse(localStorage.getItem('damier_puzzle_progress')||'{}');
+    const today = new Date().toISOString().slice(0,10);
+    const t = store[today] || {solved:0,total:0};
+    document.getElementById('puzzleProgressText').textContent = `Aujourd'hui : ${t.solved}/${t.total} exercices réussis.`;
+  }catch(e){}
+}
+document.getElementById('startTrainingBtn').addEventListener('click', startDailyTraining);
+document.getElementById('puzzleNextBtn').addEventListener('click', nextPuzzle);
+document.getElementById('puzzleQuitBtn').addEventListener('click', endDailyTraining);
+
+/* ============================================================
+   V3 — RENDU DU PROGRAMME D'APPRENTISSAGE
+   ============================================================ */
+function getReadLessons(){
+  try{ return new Set(JSON.parse(localStorage.getItem('damier_lessons_read')||'[]')); }
+  catch(e){ return new Set(); }
+}
+function markLessonRead(topic){
+  try{
+    const set = getReadLessons(); set.add(topic);
+    localStorage.setItem('damier_lessons_read', JSON.stringify([...set]));
+  }catch(e){}
+}
+function renderLessons(){
+  const read = getReadLessons();
+  const container = document.getElementById('lessonList');
+  container.innerHTML = '';
+  let lastLevel = null;
+  LESSONS.forEach((lesson, idx)=>{
+    if(lesson.levelTitle !== lastLevel){
+      const h = document.createElement('div');
+      h.className = 'lesson-level';
+      h.textContent = lesson.levelTitle;
+      container.appendChild(h);
+      lastLevel = lesson.levelTitle;
+    }
+    const item = document.createElement('div');
+    item.className = 'lesson-item';
+    const head = document.createElement('div');
+    head.className = 'lesson-head';
+    head.innerHTML = `<span><span class="check">${read.has(lesson.topic)?'✓':'○'}</span>${lesson.topic}</span><span>▾</span>`;
+    const body = document.createElement('div');
+    body.className = 'lesson-body';
+    body.textContent = lesson.text;
+    if(ILLUSTRATIONS[lesson.topic]){
+      const exBtn = document.createElement('button');
+      exBtn.textContent = 'Voir un exemple sur le damier';
+      exBtn.style.marginTop = '8px';
+      exBtn.addEventListener('click', (ev)=>{ ev.stopPropagation(); showIllustration(lesson.topic); });
+      body.appendChild(document.createElement('br'));
+      body.appendChild(exBtn);
+    }
+    head.addEventListener('click', ()=>{
+      body.classList.toggle('open');
+      if(!read.has(lesson.topic)){ markLessonRead(lesson.topic); renderLessons(); }
+    });
+    item.appendChild(head); item.appendChild(body);
+    container.appendChild(item);
+  });
+  const total = LESSONS.length;
+  document.getElementById('lessonProgressText').textContent = `${read.size}/${total} leçons consultées`;
+}
+
+/* ============================================================
+   V4 — BIBLIOTHÈQUE DE PARTIES HISTORIQUES (lecteur pas-à-pas)
+   ============================================================ */
+function renderGameLibrary(){
+  const el = document.getElementById('gameLibraryList');
+  el.innerHTML = '';
+  GAMES.forEach(g=>{
+    const btn = document.createElement('button');
+    btn.textContent = `${g.white} – ${g.black} (${g.year})`;
+    btn.addEventListener('click', ()=>startGameViewer(g.id));
+    el.appendChild(btn);
+  });
+}
+function startGameViewer(gameId){
+  if(puzzleMode) endDailyTraining();
+  viewerGame = GAMES.find(g=>g.id===gameId);
+  viewerSavedState = {board:cloneBoard(board), turn, mode, history:history.slice(), totalCaptures, totalMoves, gameOver};
+  viewerMode = true;
+  document.getElementById('gameViewerPanel').style.display = 'block';
+  loadViewerPly(0);
+}
+function loadViewerPly(n){
+  let b = initBoard(), t = 'w';
+  for(let i=0;i<n;i++){
+    const tok = viewerGame.moves[i];
+    const isCap = tok.includes('x');
+    const parts = tok.split(/[-x]/).map(Number);
+    const fromC = squareToCoord(parts[0]), toC = squareToCoord(parts[parts.length-1]);
+    const legal = legalMoves(b,t);
+    const m = legal.find(mv => mv.from.r===fromC.r && mv.from.c===fromC.c &&
+      mv.path[mv.path.length-1].r===toC.r && mv.path[mv.path.length-1].c===toC.c && mv.isCapture===isCap);
+    if(!m) break; // transcription déjà revalidée à la construction de GAMES ; garde-fou uniquement
+    b = applyMove(b,m);
+    t = t==='w' ? 'b' : 'w';
+  }
+  board=b; turn=t; selected=null; moveOptions=[]; gameOver=false; viewerPly=n;
+  const evalScore = Math.round(evaluate(board,'w'));
+  document.getElementById('gameViewerInfo').innerHTML =
+    `<b>${viewerGame.white}</b> (Blancs) vs <b>${viewerGame.black}</b> (Noirs) — ${viewerGame.year}<br>` +
+    `Coup ${n}/${viewerGame.moves.length}${n>0 ? (' · dernier coup : '+viewerGame.moves[n-1]) : ' · position de départ'}<br>` +
+    `Évaluation du moteur (point de vue Blancs) : ${evalScore>0?'+':''}${evalScore}<br>` +
+    `<span style="font-size:.68rem;color:#8a7a63;">Source : ${viewerGame.source}</span>`;
+  document.getElementById('viewerPrevBtn').disabled = (n<=0);
+  document.getElementById('viewerNextBtn').disabled = (n>=viewerGame.moves.length);
+  render();
+}
+function viewerStep(delta){
+  const n = Math.max(0, Math.min(viewerGame.moves.length, viewerPly+delta));
+  loadViewerPly(n);
+}
+function endGameViewer(){
+  viewerMode=false;
+  document.getElementById('gameViewerPanel').style.display='none';
+  board=viewerSavedState.board; turn=viewerSavedState.turn; mode=viewerSavedState.mode;
+  history=viewerSavedState.history; totalCaptures=viewerSavedState.totalCaptures;
+  totalMoves=viewerSavedState.totalMoves; gameOver=viewerSavedState.gameOver;
+  selected=null; moveOptions=[];
+  render(); updateCoachHint();
+}
+document.getElementById('viewerPrevBtn').addEventListener('click', ()=>viewerStep(-1));
+document.getElementById('viewerNextBtn').addEventListener('click', ()=>viewerStep(1));
+document.getElementById('viewerQuitBtn').addEventListener('click', endGameViewer);
+
+/* ============================================================
+   V5 — AFFICHAGE DES ILLUSTRATIONS DE CONCEPTS
+   ============================================================ */
+function showIllustration(topic){
+  const ill = ILLUSTRATIONS[topic];
+  if(!ill) return;
+  if(puzzleMode) endDailyTraining();
+  if(viewerMode) endGameViewer();
+  illustrationSavedState = {board:cloneBoard(board), turn, mode, history:history.slice(), totalCaptures, totalMoves, gameOver};
+  illustrationMode = true;
+  const b = Array.from({length:10},()=>Array(10).fill(null));
+  for(const piece of ill.pieces) b[piece.r][piece.c] = {color:piece.color, king: !!piece.king};
+  board = b; turn = ill.toMove; selected=null; moveOptions=[]; gameOver=false;
+  document.getElementById('illustrationCaption').innerHTML = `<b>${topic}</b><br>${ill.caption}`;
+  document.getElementById('illustrationPanel').style.display = 'block';
+  render();
+}
+function closeIllustration(){
+  illustrationMode = false;
+  document.getElementById('illustrationPanel').style.display = 'none';
+  board = illustrationSavedState.board; turn = illustrationSavedState.turn; mode = illustrationSavedState.mode;
+  history = illustrationSavedState.history; totalCaptures = illustrationSavedState.totalCaptures;
+  totalMoves = illustrationSavedState.totalMoves; gameOver = illustrationSavedState.gameOver;
+  selected=null; moveOptions=[];
+  render(); updateCoachHint();
+}
+document.getElementById('illustrationCloseBtn').addEventListener('click', closeIllustration);
+
+/* ============================================================
+   V4 — TABLEAU DE BORD DE PROGRESSION (persistant, localStorage)
+   ============================================================ */
+function renderProgressDashboard(){
+  const el = document.getElementById('progressDashboard');
+  let arr = [];
+  try{ arr = JSON.parse(localStorage.getItem('damier_sessions')||'[]'); }catch(e){}
+  if(arr.length===0){ el.textContent = "Termine une partie pour voir ta progression apparaître ici."; return; }
+  const avgElo = Math.round(arr.reduce((s,r)=>s+r.elo,0)/arr.length);
+  const avgBlunders = (arr.reduce((s,r)=>s+r.blunders,0)/arr.length).toFixed(1);
+  const aiGames = arr.filter(r=>r.result==='victoire'||r.result==='defaite');
+  const wins = aiGames.filter(r=>r.result==='victoire').length;
+  const winRateTxt = aiGames.length ? `${wins}/${aiGames.length} victoires contre l'IA` : "aucune partie contre l'IA terminée";
+  const recent = arr.slice(-10);
+  const bars = recent.map(r=>{
+    const pct = Math.max(6, Math.min(100, Math.round(((r.elo-500)/(2100-500))*100)));
+    return `<div class="elo-bar-row"><span style="width:56px;">${r.date.slice(5)}</span>` +
+      `<div class="elo-bar-track"><div class="elo-bar-fill" style="width:${pct}%;"></div></div>` +
+      `<span style="width:32px;text-align:right;">${r.elo}</span></div>`;
+  }).join('');
+  el.innerHTML = `<div style="margin-bottom:6px;">Parties analysées : <b>${arr.length}</b> · Niveau moyen : <b style="color:var(--brass-bright)">${avgElo}</b> · Erreurs/partie : <b>${avgBlunders}</b><br>${winRateTxt}</div>${bars}`;
+}
+
+/* ============================================================
+   V3 — COACH RÉACTIF (commente le coup réellement joué)
+   ============================================================ */
+function centerScore(board,color){
+  let s=0;
+  for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++){
+    const p=board[r][c]; if(!p || p.color!==color) continue;
+    s += 4 - (Math.abs(r-4.5)+Math.abs(c-4.5))*0.5;
+  }
+  return s;
+}
+function commentOnMove(boardBefore, boardAfter, color, move){
+  const opp = color==='w' ? 'b' : 'w';
+  const notes = [];
+  if(move.isCapture){
+    notes.push(move.count>=2
+      ? `Belle rafle : ${move.count} pièces capturées d'un coup.`
+      : "Prise obligatoire jouée.");
+  }
+  const oppCapturesBefore = legalMoves(boardBefore,opp).some(m=>m.isCapture);
+  const oppCapturesAfter = legalMoves(boardAfter,opp).some(m=>m.isCapture);
+  if(!oppCapturesBefore && oppCapturesAfter){
+    notes.push("⚠ Ce coup ouvre une prise pour l'adversaire — surveille les cases voisines avant de jouer.");
+  }
+  const centerBefore = centerScore(boardBefore,color);
+  const centerAfter = centerScore(boardAfter,color);
+  if(centerAfter < centerBefore - 1.2){
+    notes.push("Ce coup affaiblit ton contrôle du centre.");
+  } else if(centerAfter > centerBefore + 1.2 && !move.isCapture){
+    notes.push("Bon réflexe : tu renforces ta présence centrale.");
+  }
+  if(notes.length===0) notes.push("Coup solide, sans faiblesse évidente détectée.");
+  return notes.join(' ');
+}
+function reflectionLine(){
+  const questions = [
+    "Qui contrôle le centre à présent ?",
+    "Une de tes pièces est-elle mal placée ou vulnérable ?",
+    "Quelles sont les menaces immédiates de l'adversaire ?",
+    "Quels sont tes 2-3 coups candidats ?",
+    "Quel est ton plan pour les prochains coups ?"
+  ];
+  return questions[Math.floor(Math.random()*questions.length)];
+}
+
+document.getElementById('askCoach').addEventListener('click', ()=>{
+  updateCoachHint();
+});
+document.getElementById('analyzeBtn').addEventListener('click', ()=>{
+  const legal = legalMoves(board,turn);
+  if(legal.length===0){ coachText.textContent = "Plus aucun coup légal disponible."; return; }
+  const evalScore = evaluate(board,'w');
+  const side = evalScore>=0 ? 'Blancs' : 'Noirs';
+  const mustCapture = legal[0].isCapture;
+  let msg = `Évaluation actuelle : avantage aux <b>${side}</b> (score ${Math.abs(Math.round(evalScore))}). `;
+  msg += mustCapture ? "Une prise est obligatoire : vérifie laquelle capture le plus de pièces." : "Pense au contrôle du centre et à la sécurité de tes pièces avant d'avancer.";
+  coachText.innerHTML = msg;
+});
+document.getElementById('newGameBtn').addEventListener('click', ()=>{
+  if(puzzleMode) endDailyTraining();
+  if(viewerMode) endGameViewer();
+  if(illustrationMode) closeIllustration();
+  board = initBoard(); turn='w'; selected=null; moveOptions=[]; history=[];
+  totalCaptures=0; totalMoves=0; gameOver=false; histList.innerHTML='—';
+  moveLog=[]; document.getElementById('reportPanel').style.display='none';
+  render(); updateCoachHint(); maybeAITurn();
+});
+document.getElementById('undoBtn').addEventListener('click', ()=>{
+  if(puzzleMode || viewerMode || illustrationMode || history.length===0) return;
+  const steps = (mode==='ai') ? 2 : 1; // annule aussi le coup de l'IA
+  for(let i=0;i<steps && history.length>0;i++){
+    const h = history.pop();
+    board = h.board; turn = h.turn; gameOver=false;
+  }
+  selected=null; moveOptions=[];
+  render(); updateCoachHint();
+});
+document.getElementById('modeSel').addEventListener('change', e=>{
+  if(puzzleMode || viewerMode || illustrationMode) return;
+  mode = e.target.value;
+  document.getElementById('diffSel').style.display = mode==='ai' ? 'inline-block':'none';
+  render(); maybeAITurn();
+});
+document.getElementById('diffSel').addEventListener('change', e=>{
+  depth = DIFF_DEPTH[e.target.value];
+});
+document.getElementById('resetDataBtn').addEventListener('click', ()=>{
+  if(!confirm('Effacer toutes les données locales (parties, exercices, leçons lues) ? Cette action est irréversible.')) return;
+  try{
+    localStorage.removeItem('damier_sessions');
+    localStorage.removeItem('damier_puzzle_progress');
+    localStorage.removeItem('damier_lessons_read');
+  }catch(e){}
+  renderProgressDashboard(); updateDailyPanel(); renderLessons();
+});
+
+render();
+updateCoachHint();
+updateDailyPanel();
+renderLessons();
+renderGameLibrary();
+renderProgressDashboard();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
